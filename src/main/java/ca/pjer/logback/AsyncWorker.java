@@ -1,38 +1,24 @@
 package ca.pjer.logback;
 
-import static ca.pjer.logback.AwsLogsAppender.MAX_BATCH_LOG_EVENTS;
-
-import java.util.ArrayDeque;
-import java.util.Collection;
-import java.util.Deque;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-
-import com.amazonaws.services.logs.model.InputLogEvent;
-
-import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 class AsyncWorker extends Worker implements Runnable {
 
     private final int maxBatchLogEvents;
-    private final int discardThreshold;
     private final AtomicBoolean running;
-    private final BlockingQueue<InputLogEvent> queue;
-    private final AtomicLong lostCount;
-
     private Thread thread;
+    private final List<String> events;
 
     AsyncWorker(AwsLogsAppender awsLogsAppender) {
         super(awsLogsAppender);
         maxBatchLogEvents = awsLogsAppender.getMaxBatchLogEvents();
-        discardThreshold = (int) Math.ceil(maxBatchLogEvents * 1.5);
         running = new AtomicBoolean(false);
-        queue = new ArrayBlockingQueue<InputLogEvent>(maxBatchLogEvents * 2);
-        lostCount = new AtomicLong(0);
+        events = Collections.synchronizedList(new ArrayList<>());
     }
 
     @Override
@@ -60,53 +46,16 @@ class AsyncWorker extends Worker implements Runnable {
                 }
                 thread = null;
             }
-            queue.clear();
+            events.clear();
         }
         super.stop();
     }
 
     @Override
-    public void append(ILoggingEvent event) {
-        // don't log if discardThreshold is met and event is not important (< WARN)
-        if (queue.size() >= discardThreshold && !event.getLevel().isGreaterOrEqual(Level.WARN)) {
-            lostCount.incrementAndGet();
-            synchronized (running) {
-                running.notifyAll();
-            }
-            return;
-        }
-        InputLogEvent logEvent = asInputLogEvent(event);
-        // are we allowed to block ?
-        if (getAwsLogsAppender().getMaxBlockTimeMillis() > 0) {
-            // we are allowed to block, offer uninterruptibly for the configured maximum blocking time
-            boolean interrupted = false;
-            long until = System.currentTimeMillis() + getAwsLogsAppender().getMaxBlockTimeMillis();
-            try {
-                long now = System.currentTimeMillis();
-                while (now < until) {
-                    try {
-                        if (!queue.offer(logEvent, until - now, TimeUnit.MILLISECONDS)) {
-                            lostCount.incrementAndGet();
-                        }
-                        break;
-                    } catch (InterruptedException e) {
-                        interrupted = true;
-                        now = System.currentTimeMillis();
-                    }
-                }
-            } finally {
-                if (interrupted) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        } else {
-            // we are not allowed to block, offer without blocking
-            if (!queue.offer(logEvent)) {
-                lostCount.incrementAndGet();
-            }
-        }
-        // trigger a flush if queue is full
-        if (queue.size() >= maxBatchLogEvents) {
+    public void append(ILoggingEvent logEvent) {
+        events.add(layoutEvent(logEvent));
+        // trigger a flush if events is full
+        if (events.size() >= maxBatchLogEvents) {
             synchronized (running) {
                 running.notifyAll();
             }
@@ -126,49 +75,21 @@ class AsyncWorker extends Worker implements Runnable {
             } catch (InterruptedException e) {
                 break;
             }
+            flush(true);
         }
         flush(true);
     }
 
     private void flush(boolean all) {
         try {
-            long lostCount = this.lostCount.getAndSet(0);
-            if (lostCount > 0) {
-                getAwsLogsAppender().addWarn(lostCount + " events lost");
-            }
-            if (!queue.isEmpty()) {
-                do {
-                    Collection<InputLogEvent> batch = drainBatchFromQueue();
-                    getAwsLogsAppender().getAwsLogsStub().logEvents(batch);
-                } while (queue.size() >= maxBatchLogEvents || (all && !queue.isEmpty()));
+            if (events.size() <= 0) {
+                getAwsLogsAppender().addInfo(" No events to log");
+            } else if (all || events.size() >= maxBatchLogEvents) {
+                getAwsLogsAppender().getAwsLogsStub().uploadToS3(events);
             }
         } catch (Exception e) {
             getAwsLogsAppender().addError("Unable to flush events to AWS", e);
         }
-    }
-    
-    // See http://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html
-    private static final int MAX_BATCH_SIZE = 1048576;
-
-    private Collection<InputLogEvent> drainBatchFromQueue() {
-        Deque<InputLogEvent> batch = new ArrayDeque<InputLogEvent>(maxBatchLogEvents);
-        queue.drainTo(batch, MAX_BATCH_LOG_EVENTS);
-        int batchSize = batchSize(batch);
-        while (batchSize > MAX_BATCH_SIZE) {
-            InputLogEvent removed = batch.removeLast();
-            batchSize -= eventSize(removed);
-            if (!queue.offer(removed)) {
-                getAwsLogsAppender().addWarn("Failed requeing message from too big batch");
-            }
-        }
-        return batch;
-    }
-    
-    private static int batchSize(Collection<InputLogEvent> batch) {
-        int size = 0;
-        for (InputLogEvent event : batch) {
-            size += eventSize(event);
-        }
-        return size;
+        events.clear();
     }
 }
