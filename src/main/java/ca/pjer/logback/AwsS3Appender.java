@@ -4,7 +4,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Layout;
 import ch.qos.logback.core.UnsynchronizedAppenderBase;
 
-public class AwsLogsAppender extends UnsynchronizedAppenderBase<ILoggingEvent> {
+public class AwsS3Appender extends UnsynchronizedAppenderBase<ILoggingEvent> {
     private Layout<ILoggingEvent> layout;
 
     private String bucketName;

@@ -9,14 +9,14 @@ import java.util.zip.GZIPOutputStream;
 
 abstract class Worker {
 
-    private AwsLogsAppender awsLogsAppender;
+    private AwsS3Appender awsS3Appender;
 
-    Worker(AwsLogsAppender awsLogsAppender) {
-        this.awsLogsAppender = awsLogsAppender;
+    Worker(AwsS3Appender awsS3Appender) {
+        this.awsS3Appender = awsS3Appender;
     }
 
-    AwsLogsAppender getAwsLogsAppender() {
-        return awsLogsAppender;
+    AwsS3Appender getAwsS3Appender() {
+        return awsS3Appender;
     }
 
     public synchronized void start() {
@@ -26,7 +26,7 @@ abstract class Worker {
     }
 
     String layoutEvent(ILoggingEvent event) {
-        return awsLogsAppender.getLayout().doLayout(event);
+        return awsS3Appender.getLayout().doLayout(event);
     }
 
     OutputStream createCompressedStreamAsNecessary(

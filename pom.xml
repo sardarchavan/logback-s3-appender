@@ -6,12 +6,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>ca.pjer</groupId>
-    <artifactId>logback-awslogs-appender</artifactId>
+    <artifactId>logback-s3-appender</artifactId>
     <version>2.0.0</version>
 
-    <name>Logback AWSLogs appender</name>
+    <name>Logback S3 appender</name>
     <description>An Amazon Web Services (AWS) Logs (CloudWatch) appender for Logback</description>
-    <url>https://github.com/pierredavidbelanger/logback-awslogs-appender</url>
+    <url>https://github.com/sardarchavan/logback-awslogs-appender</url>
 
     <licenses>
         <license>
@@ -22,17 +22,17 @@
 
     <developers>
         <developer>
-            <name>Pierre-David Bélanger</name>
-            <email>pierredavidbelanger@gmail.com</email>
-            <organization>PjEr.ca</organization>
-            <organizationUrl>http://www.pjer.ca/</organizationUrl>
+            <name>Sardar Chavan</name>
+            <email>sardar.chavan@gmail.com</email>
+            <organization>Belong</organization>
+            <organizationUrl>http://www.belong.com.au/</organizationUrl>
         </developer>
     </developers>
 
     <scm>
-        <connection>scm:git:git@github.com:pierredavidbelanger/logback-awslogs-appender.git</connection>
-        <developerConnection>scm:git:git@github.com:pierredavidbelanger/logback-awslogs-appender.git</developerConnection>
-        <url>https://github.com/pierredavidbelanger/logback-awslogs-appender</url>
+        <connection>scm:git:git@github.com:sardarchavan/logback-s3-appender.git</connection>
+        <developerConnection>scm:git:git@github.com:sardarchavan/logback-s3-appender.git</developerConnection>
+        <url>https://github.com/sardarchavan/logback-s3-appender</url>
     </scm>
 
     <distributionManagement>

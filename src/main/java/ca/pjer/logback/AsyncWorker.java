@@ -14,9 +14,9 @@ class AsyncWorker extends Worker implements Runnable {
     private Thread thread;
     private final List<String> events;
 
-    AsyncWorker(AwsLogsAppender awsLogsAppender) {
-        super(awsLogsAppender);
-        maxBatchLogEvents = awsLogsAppender.getMaxBatchLogEvents();
+    AsyncWorker(AwsS3Appender awsS3Appender) {
+        super(awsS3Appender);
+        maxBatchLogEvents = awsS3Appender.getMaxBatchLogEvents();
         running = new AtomicBoolean(false);
         events = Collections.synchronizedList(new ArrayList<>());
     }
@@ -27,7 +27,7 @@ class AsyncWorker extends Worker implements Runnable {
         if (running.compareAndSet(false, true)) {
             thread = new Thread(this);
             thread.setDaemon(true);
-            thread.setName(getAwsLogsAppender().getName() + " Async Worker");
+            thread.setName(getAwsS3Appender().getName() + " Async Worker");
             thread.start();
         }
     }
@@ -69,7 +69,7 @@ class AsyncWorker extends Worker implements Runnable {
             try {
                 synchronized (running) {
                     if (running.get()) {
-                        running.wait(getAwsLogsAppender().getMaxFlushTimeMillis());
+                        running.wait(getAwsS3Appender().getMaxFlushTimeMillis());
                     }
                 }
             } catch (InterruptedException e) {
@@ -83,12 +83,12 @@ class AsyncWorker extends Worker implements Runnable {
     private void flush(boolean all) {
         try {
             if (events.size() <= 0) {
-                getAwsLogsAppender().addInfo(" No events to log");
+                getAwsS3Appender().addInfo(" No events to log");
             } else if (all || events.size() >= maxBatchLogEvents) {
-                getAwsLogsAppender().getAwsLogsStub().uploadToS3(events);
+                getAwsS3Appender().getAwsLogsStub().uploadToS3(events);
             }
         } catch (Exception e) {
-            getAwsLogsAppender().addError("Unable to flush events to AWS", e);
+            getAwsS3Appender().addError("Unable to flush events to AWS", e);
         }
         events.clear();
     }

@@ -93,13 +93,13 @@ class AWSLogsStub {
                 writer.write(event);
             }
         } catch (IOException e) {
-            new AwsLogsAppender().addError(e.getMessage());
+            new AwsS3Appender().addError(e.getMessage());
         } finally {
             if (writer != null) {
                 try {
                     writer.close();
                 } catch (IOException e) {
-                    new AwsLogsAppender().addError(e.getMessage());
+                    new AwsS3Appender().addError(e.getMessage());
                 }
             }
         }

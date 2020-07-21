@@ -37,15 +37,15 @@ public class AsyncWorkerTest {
 
     private static AsyncWorker asyncWorker(AWSLogsStub mockedAwsLogsStub, int maxBatchLogEvents,
         long maxFlushTimeMillis) {
-        AwsLogsAppender awsLogsAppender = new AwsLogsAppender();
-        awsLogsAppender.setLayout(new EchoLayout<ILoggingEvent>());
-        awsLogsAppender.setBucketName("FakeBucket");
-        awsLogsAppender.setBucketPath("FakePath");
-        awsLogsAppender.setMaxBatchLogEvents(maxBatchLogEvents);
-        awsLogsAppender.setMaxFlushTimeMillis(maxFlushTimeMillis);
-        awsLogsAppender.setAwsLogsStub(mockedAwsLogsStub);
-        AsyncWorker asyncWorker = new AsyncWorker(awsLogsAppender);
-        awsLogsAppender.setWorker(asyncWorker);
+        AwsS3Appender awsS3Appender = new AwsS3Appender();
+        awsS3Appender.setLayout(new EchoLayout<ILoggingEvent>());
+        awsS3Appender.setBucketName("FakeBucket");
+        awsS3Appender.setBucketPath("FakePath");
+        awsS3Appender.setMaxBatchLogEvents(maxBatchLogEvents);
+        awsS3Appender.setMaxFlushTimeMillis(maxFlushTimeMillis);
+        awsS3Appender.setAwsLogsStub(mockedAwsLogsStub);
+        AsyncWorker asyncWorker = new AsyncWorker(awsS3Appender);
+        awsS3Appender.setWorker(asyncWorker);
         return asyncWorker;
     }
 
